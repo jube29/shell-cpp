@@ -8,10 +8,11 @@ int main() {
   std::cout << std::unitbuf;
   std::cerr << std::unitbuf;
 
-  std::cout << ShellConstants::PROMPT;
-
-  std::string command;
-  std::getline(std::cin, command);
-  std::cout << command << ShellConstants::CMD_NOT_FOUND << std::endl;
+  while (true) {
+    std::cout << ShellConstants::PROMPT;
+    std::string command;
+    std::getline(std::cin, command);
+    std::cout << command << ShellConstants::CMD_NOT_FOUND << std::endl;
+  }
 }
 
