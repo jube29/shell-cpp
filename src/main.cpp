@@ -1,3 +1,5 @@
+#include "constants.h"
+
 #include <iostream>
 #include <string>
 
@@ -6,10 +8,10 @@ int main() {
   std::cout << std::unitbuf;
   std::cerr << std::unitbuf;
 
-  std::cout << "$ ";
+  std::cout << ShellConstants::PROMPT;
 
   std::string command;
   std::getline(std::cin, command);
-  std::cout << command << ": command not found" << std::endl;
+  std::cout << command << ShellConstants::CMD_NOT_FOUND << std::endl;
 }
 
