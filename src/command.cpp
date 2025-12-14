@@ -3,6 +3,9 @@
 #include <cstdlib>
 #include <functional>
 #include <iostream>
+#include <sstream>
+#include <string>
+#include <unistd.h>
 #include <unordered_map>
 
 namespace {
@@ -28,14 +31,30 @@ int builtin_echo(const std::vector<std::string> &args) {
 
 int builtin_type(const std::vector<std::string> &args) {
   int code = 0;
+  const char *PATH = std::getenv("PATH");
   for (size_t i = 0; i < args.size(); i++) {
     if (is_builtin(args[i])) {
       std::cout << args[i] << " is a shell builtin" << std::endl;
-    } else {
-      ;
-      std::cout << args[i] << ": not found" << std::endl;
-      code = 1;
+      continue;
     }
+    if (PATH) {
+      std::istringstream iss(PATH);
+      std::string dir;
+      bool found = false;
+      while (std::getline(iss, dir, ':')) {
+        std::string full_path = dir + "/" + args[i];
+        if (access(full_path.c_str(), X_OK) == 0) {
+          std::cout << args[i] << " is " << full_path << std::endl;
+          found = true;
+          break;
+        }
+      }
+      if (found) {
+        continue;
+      }
+    }
+    std::cout << args[i] << ": not found" << std::endl;
+    code = 1;
   }
   return code;
 }
