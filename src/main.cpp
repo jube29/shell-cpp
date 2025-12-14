@@ -1,9 +1,13 @@
 #include "command.h"
-#include "constants.h"
 
 #include <iostream>
 #include <sstream>
 #include <string>
+
+namespace constants {
+const char *PROMPT = "$ ";
+const char *CMD_NOT_FOUND = ": command not found";
+} // namespace constants
 
 int main() {
   // Flush after every std::cout / std:cerr
@@ -12,7 +16,7 @@ int main() {
   command::init();
 
   while (true) {
-    std::cout << ShellConstants::PROMPT;
+    std::cout << constants::PROMPT;
 
     std::string input;
     std::string command;
@@ -33,7 +37,7 @@ int main() {
 
     int code = command::execute(command, args);
     if (code == 127) {
-      std::cout << command << ShellConstants::CMD_NOT_FOUND << std::endl;
+      std::cout << command << constants::CMD_NOT_FOUND << std::endl;
     }
   }
 }
