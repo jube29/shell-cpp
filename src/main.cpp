@@ -1,4 +1,4 @@
-#include "command_executor.h"
+#include "command.h"
 #include "constants.h"
 
 #include <iostream>
@@ -9,7 +9,7 @@ int main() {
   // Flush after every std::cout / std:cerr
   std::cout << std::unitbuf;
   std::cerr << std::unitbuf;
-  CommandExecutor command_executor = CommandExecutor();
+  command::init();
 
   while (true) {
     std::cout << ShellConstants::PROMPT;
@@ -31,7 +31,7 @@ int main() {
       args.push_back(arg);
     }
 
-    int code = command_executor.executeCommand(command, args);
+    int code = command::execute(command, args);
     if (code == 127) {
       std::cout << command << ShellConstants::CMD_NOT_FOUND << std::endl;
     }
