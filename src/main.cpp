@@ -1,20 +1,40 @@
+#include "command_executor.h"
 #include "constants.h"
 
 #include <iostream>
+#include <sstream>
 #include <string>
 
 int main() {
   // Flush after every std::cout / std:cerr
   std::cout << std::unitbuf;
   std::cerr << std::unitbuf;
+  CommandExecutor command_executor = CommandExecutor();
 
   while (true) {
     std::cout << ShellConstants::PROMPT;
+
+    std::string input;
     std::string command;
-    std::getline(std::cin, command);
-    if (command == ShellConstants::EXIT_CMD)
+    std::vector<std::string> args;
+
+    if (!std::getline(std::cin, input)) {
       break;
-    std::cout << command << ShellConstants::CMD_NOT_FOUND << std::endl;
+    }
+    std::istringstream iss(input);
+    iss >> command;
+    if (command.empty()) {
+      continue;
+    }
+    std::string arg;
+    while (iss >> arg) {
+      args.push_back(arg);
+    }
+
+    int code = command_executor.executeCommand(command, args);
+    if (code == 127) {
+      std::cout << command << ShellConstants::CMD_NOT_FOUND << std::endl;
+    }
   }
 }
 
