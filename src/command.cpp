@@ -3,8 +3,11 @@
 #include <cstdlib>
 #include <functional>
 #include <iostream>
+#include <optional>
 #include <sstream>
 #include <string>
+#include <sys/types.h>
+#include <sys/wait.h>
 #include <unistd.h>
 #include <unordered_map>
 
@@ -12,6 +15,22 @@ namespace {
 std::unordered_map<std::string, std::function<int(const std::vector<std::string> &)>> builtins;
 
 bool is_builtin(const std::string &name) { return builtins.count(name) > 0; }
+
+std::optional<std::string> find_in_path(const std::string &cmd) {
+  const char *path_env = std::getenv("PATH");
+  if (!path_env)
+    return std::nullopt;
+
+  std::istringstream ss(path_env);
+  std::string dir;
+  while (std::getline(ss, dir, ':')) {
+    std::string full_path = dir + "/" + cmd;
+    if (access(full_path.c_str(), X_OK) == 0) {
+      return full_path;
+    }
+  }
+  return std::nullopt;
+}
 
 int builtin_exit(const std::vector<std::string> &args) {
   int code = args.empty() ? 0 : std::stoi(args[0]);
@@ -31,30 +50,15 @@ int builtin_echo(const std::vector<std::string> &args) {
 
 int builtin_type(const std::vector<std::string> &args) {
   int code = 0;
-  const char *PATH = std::getenv("PATH");
   for (size_t i = 0; i < args.size(); i++) {
     if (is_builtin(args[i])) {
       std::cout << args[i] << " is a shell builtin" << std::endl;
-      continue;
+    } else if (auto path = find_in_path(args[i])) {
+      std::cout << args[i] << " is " << *path << std::endl;
+    } else {
+      std::cout << args[i] << ": not found" << std::endl;
+      code = 1;
     }
-    if (PATH) {
-      std::istringstream iss(PATH);
-      std::string dir;
-      bool found = false;
-      while (std::getline(iss, dir, ':')) {
-        std::string full_path = dir + "/" + args[i];
-        if (access(full_path.c_str(), X_OK) == 0) {
-          std::cout << args[i] << " is " << full_path << std::endl;
-          found = true;
-          break;
-        }
-      }
-      if (found) {
-        continue;
-      }
-    }
-    std::cout << args[i] << ": not found" << std::endl;
-    code = 1;
   }
   return code;
 }
@@ -68,9 +72,28 @@ void init() {
 }
 
 int execute(const std::string &cmd, const std::vector<std::string> &args) {
-  if (!is_builtin(cmd))
-    return 127;
-  return builtins[cmd](args);
+  if (is_builtin(cmd)) {
+    return builtins[cmd](args);
+  }
+  auto path = find_in_path(cmd);
+  if (path) {
+    pid_t pid = fork();
+    if (pid == 0) {
+      std::vector<char *> argv;
+      argv.push_back(const_cast<char *>(cmd.c_str()));
+      for (const auto &arg : args) {
+        argv.push_back(const_cast<char *>(arg.c_str()));
+      }
+      argv.push_back(nullptr);
+      execv(path->c_str(), argv.data());
+      std::exit(127);
+    } else if (pid > 0) {
+      int status;
+      waitpid(pid, &status, 0);
+      return WEXITSTATUS(status);
+    }
+  }
+  return 127;
 }
 } // namespace command
 
