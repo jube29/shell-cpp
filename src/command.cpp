@@ -1,6 +1,7 @@
 #include "command.h"
 
 #include <cstdlib>
+#include <cstring>
 #include <functional>
 #include <iostream>
 #include <limits.h>
@@ -73,16 +74,25 @@ int builtin_pwd(const std::vector<std::string> &args) {
   }
   std::cerr << "pwd: error getting current directory" << std::endl;
   return 1;
-};
+}
 
 int builtin_cd(const std::vector<std::string> &args) {
   if (args.empty()) {
     return 0;
   }
-  if (chdir(args[0].c_str()) != 0) {
-    std::cerr << "cd: " << args[0] << ": No such file or directory" << std::endl;
+  std::string path = args[0];
+  if (path[0] == '~') {
+    char *home = getenv("HOME");
+    if (!home) {
+      std::cerr << "cd: HOME not set" << std::endl;
+      return 1;
+    }
+    path.replace(0, 1, home);
+  }
+  if (chdir(path.c_str()) != 0) {
+    std::cerr << "cd: " << args[0] << ": " << strerror(errno) << std::endl;
     return 1;
-  };
+  }
   return 0;
 }
 
