@@ -6,7 +6,6 @@
 
 namespace constants {
 const char *PROMPT = "$ ";
-const char *CMD_NOT_FOUND = ": command not found";
 } // namespace constants
 
 int main() {
@@ -35,10 +34,7 @@ int main() {
       args.push_back(arg);
     }
 
-    int code = command::execute(command, args);
-    if (code == 127) {
-      std::cout << command << constants::CMD_NOT_FOUND << std::endl;
-    }
+    command::execute(command, args);
   }
 }
 

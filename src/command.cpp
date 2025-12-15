@@ -91,15 +91,17 @@ void init() {
   builtins["type"] = builtin_type;
 }
 
-int execute(const std::string &cmd, const std::vector<std::string> &args) {
+void execute(const std::string &cmd, const std::vector<std::string> &args) {
   if (is_builtin(cmd)) {
-    return builtins[cmd](args);
+    builtins[cmd](args);
+    return;
   }
   auto path = find_in_path(cmd);
   if (path) {
-    return execute_external(cmd, *path, args);
+    execute_external(cmd, *path, args);
+    return;
   }
-  return 127;
+  std::cout << cmd << ": command not found" << std::endl;
 }
 } // namespace command
 

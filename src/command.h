@@ -6,7 +6,7 @@
 
 namespace command {
 void init();
-int execute(const std::string &cmd, const std::vector<std::string> &args);
+void execute(const std::string &cmd, const std::vector<std::string> &args);
 } // namespace command
 
 #endif
