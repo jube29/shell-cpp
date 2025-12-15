@@ -3,6 +3,8 @@
 #include <cstdlib>
 #include <functional>
 #include <iostream>
+#include <limits.h>
+#include <linux/limits.h>
 #include <optional>
 #include <sstream>
 #include <string>
@@ -63,8 +65,17 @@ int builtin_type(const std::vector<std::string> &args) {
   return code;
 }
 
-int execute_external(const std::string &cmd, const std::string &path,
-                     const std::vector<std::string> &args) {
+int builtin_pwd(const std::vector<std::string> &args) {
+  char cwd[PATH_MAX];
+  if (getcwd(cwd, PATH_MAX) != nullptr) {
+    std::cout << cwd << std::endl;
+    return 0;
+  }
+  std::cerr << "pwd: error getting current directory" << std::endl;
+  return 1;
+};
+
+int execute_external(const std::string &cmd, const std::string &path, const std::vector<std::string> &args) {
   pid_t pid = fork();
   if (pid == 0) {
     std::vector<char *> argv;
@@ -89,6 +100,7 @@ void init() {
   builtins["exit"] = builtin_exit;
   builtins["echo"] = builtin_echo;
   builtins["type"] = builtin_type;
+  builtins["pwd"] = builtin_pwd;
 }
 
 void execute(const std::string &cmd, const std::vector<std::string> &args) {
