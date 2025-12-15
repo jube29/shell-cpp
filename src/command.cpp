@@ -75,6 +75,17 @@ int builtin_pwd(const std::vector<std::string> &args) {
   return 1;
 };
 
+int builtin_cd(const std::vector<std::string> &args) {
+  if (args.empty()) {
+    return 0;
+  }
+  if (chdir(args[0].c_str()) != 0) {
+    std::cerr << "cd: " << args[0] << ": No such file or directory" << std::endl;
+    return 1;
+  };
+  return 0;
+}
+
 int execute_external(const std::string &cmd, const std::string &path, const std::vector<std::string> &args) {
   pid_t pid = fork();
   if (pid == 0) {
@@ -101,6 +112,7 @@ void init() {
   builtins["echo"] = builtin_echo;
   builtins["type"] = builtin_type;
   builtins["pwd"] = builtin_pwd;
+  builtins["cd"] = builtin_cd;
 }
 
 void execute(const std::string &cmd, const std::vector<std::string> &args) {
