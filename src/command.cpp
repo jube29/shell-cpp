@@ -117,6 +117,18 @@ int execute_external(const std::string &cmd, const std::string &path, const std:
 } // namespace
 
 namespace command {
+
+Input parse(const std::string &input) {
+  Input result;
+  std::istringstream iss(input);
+  iss >> result.cmd;
+  std::string arg;
+  while (iss >> arg) {
+    result.args.push_back(arg);
+  }
+  return result;
+}
+
 void init() {
   builtins["exit"] = builtin_exit;
   builtins["echo"] = builtin_echo;

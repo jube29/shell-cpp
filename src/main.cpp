@@ -1,7 +1,6 @@
 #include "command.h"
 
 #include <iostream>
-#include <sstream>
 #include <string>
 
 namespace constants {
@@ -18,23 +17,16 @@ int main() {
     std::cout << constants::PROMPT;
 
     std::string input;
-    std::string command;
-    std::vector<std::string> args;
-
     if (!std::getline(std::cin, input)) {
       break;
     }
-    std::istringstream iss(input);
-    iss >> command;
-    if (command.empty()) {
+
+    auto parsed = command::parse(input);
+    if (parsed.cmd.empty()) {
       continue;
     }
-    std::string arg;
-    while (iss >> arg) {
-      args.push_back(arg);
-    }
 
-    command::execute(command, args);
+    command::execute(parsed.cmd, parsed.args);
   }
 }
 
