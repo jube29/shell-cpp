@@ -62,6 +62,26 @@ int builtin_type(const std::vector<std::string> &args) {
   }
   return code;
 }
+
+int execute_external(const std::string &cmd, const std::string &path,
+                     const std::vector<std::string> &args) {
+  pid_t pid = fork();
+  if (pid == 0) {
+    std::vector<char *> argv;
+    argv.push_back(const_cast<char *>(cmd.c_str()));
+    for (const auto &arg : args) {
+      argv.push_back(const_cast<char *>(arg.c_str()));
+    }
+    argv.push_back(nullptr);
+    execv(path.c_str(), argv.data());
+    std::exit(127);
+  } else if (pid > 0) {
+    int status;
+    waitpid(pid, &status, 0);
+    return WEXITSTATUS(status);
+  }
+  return 127;
+}
 } // namespace
 
 namespace command {
@@ -77,21 +97,7 @@ int execute(const std::string &cmd, const std::vector<std::string> &args) {
   }
   auto path = find_in_path(cmd);
   if (path) {
-    pid_t pid = fork();
-    if (pid == 0) {
-      std::vector<char *> argv;
-      argv.push_back(const_cast<char *>(cmd.c_str()));
-      for (const auto &arg : args) {
-        argv.push_back(const_cast<char *>(arg.c_str()));
-      }
-      argv.push_back(nullptr);
-      execv(path->c_str(), argv.data());
-      std::exit(127);
-    } else if (pid > 0) {
-      int status;
-      waitpid(pid, &status, 0);
-      return WEXITSTATUS(status);
-    }
+    return execute_external(cmd, *path, args);
   }
   return 127;
 }
