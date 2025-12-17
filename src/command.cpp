@@ -120,12 +120,32 @@ namespace command {
 
 Input parse(const std::string &input) {
   Input result;
-  std::istringstream iss(input);
-  iss >> result.cmd;
-  std::string arg;
-  while (iss >> arg) {
-    result.args.push_back(arg);
+  std::string current;
+  bool in_quote{false};
+
+  for (char c : input) {
+    if (c == '\'') {
+      in_quote = !in_quote;
+    } else if (c == ' ' && !in_quote) {
+      if (result.cmd.empty()) {
+        result.cmd = current;
+      } else if (!current.empty()) {
+        result.args.push_back(current);
+      }
+      current.clear();
+    } else {
+      current += c;
+    }
   }
+
+  if (!current.empty()) {
+    if (result.cmd.empty()) {
+      result.cmd = current;
+    } else {
+      result.args.push_back(current);
+    }
+  }
+
   return result;
 }
 
