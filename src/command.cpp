@@ -121,12 +121,15 @@ namespace command {
 Input parse(const std::string &input) {
   Input result;
   std::string current;
-  bool in_quote{false};
+  bool s_quote{false};
+  bool d_quote{false};
 
   for (char c : input) {
-    if (c == '\'') {
-      in_quote = !in_quote;
-    } else if (c == ' ' && !in_quote) {
+    if (c == '\"' && !s_quote) {
+      d_quote = !d_quote;
+    } else if (c == '\'' && !d_quote) {
+      s_quote = !s_quote;
+    } else if (c == ' ' && !s_quote && !d_quote) {
       if (result.cmd.empty()) {
         result.cmd = current;
       } else if (!current.empty()) {
