@@ -123,9 +123,15 @@ Input parse(const std::string &input) {
   std::string current;
   bool s_quote{false};
   bool d_quote{false};
+  bool escaped{false};
 
   for (char c : input) {
-    if (c == '\"' && !s_quote) {
+    if (escaped) {
+      current += c;
+      escaped = false;
+    } else if (!s_quote && !d_quote && c == '\\') {
+      escaped = true;
+    } else if (c == '\"' && !s_quote) {
       d_quote = !d_quote;
     } else if (c == '\'' && !d_quote) {
       s_quote = !s_quote;
