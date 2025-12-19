@@ -125,12 +125,27 @@ Input parse(const std::string &input) {
   bool d_quote{false};
   bool escaped{false};
 
-  for (char c : input) {
+  for (size_t i = 0; i < input.size(); i++) {
+    char c = input[i];
     if (escaped) {
       current += c;
       escaped = false;
-    } else if (!s_quote && !d_quote && c == '\\') {
-      escaped = true;
+    } else if (c == '\\' && !s_quote) {
+      if (d_quote) {
+        // In double quotes, backslash only escapes: $ ` " \ newline
+        if (i + 1 < input.size()) {
+          char next = input[i + 1];
+          if (next == '$' || next == '`' || next == '"' || next == '\\' || next == '\n') {
+            escaped = true;
+          } else {
+            current += c; // Keep the backslash literally
+          }
+        } else {
+          current += c; // Trailing backslash, keep it
+        }
+      } else {
+        escaped = true;
+      }
     } else if (c == '\"' && !s_quote) {
       d_quote = !d_quote;
     } else if (c == '\'' && !d_quote) {
