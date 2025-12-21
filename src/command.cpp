@@ -1,38 +1,18 @@
 #include "command.h"
+#include "builtin.h"
 
 #include <cstdlib>
-#include <cstring>
-#include <functional>
 #include <iostream>
-#include <limits.h>
-#include <linux/limits.h>
 #include <optional>
 #include <sstream>
 #include <string>
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <unistd.h>
-#include <unordered_map>
 
 using namespace std;
 
 namespace {
-// Forward declarations
-int builtin_exit(const vector<string> &args);
-int builtin_echo(const vector<string> &args);
-int builtin_type(const vector<string> &args);
-int builtin_pwd(const vector<string> &args);
-int builtin_cd(const vector<string> &args);
-
-unordered_map<string, function<int(const vector<string> &)>> builtins = {
-    {"exit", builtin_exit},
-    {"echo", builtin_echo},
-    {"type", builtin_type},
-    {"pwd", builtin_pwd},
-    {"cd", builtin_cd},
-};
-
-bool is_builtin(const string &name) { return builtins.count(name) > 0; }
 
 optional<string> find_in_path(const string &cmd) {
   const char *path_env = getenv("PATH");
@@ -48,67 +28,6 @@ optional<string> find_in_path(const string &cmd) {
     }
   }
   return nullopt;
-}
-
-int builtin_exit(const vector<string> &args) {
-  int code = args.empty() ? 0 : stoi(args[0]);
-  exit(code);
-  return code;
-}
-
-int builtin_echo(const vector<string> &args) {
-  for (size_t i = 0; i < args.size(); i++) {
-    if (i > 0)
-      cout << " ";
-    cout << args[i];
-  }
-  cout << endl;
-  return 0;
-}
-
-int builtin_type(const vector<string> &args) {
-  int code = 0;
-  for (size_t i = 0; i < args.size(); i++) {
-    if (is_builtin(args[i])) {
-      cout << args[i] << " is a shell builtin" << endl;
-    } else if (auto path = find_in_path(args[i])) {
-      cout << args[i] << " is " << *path << endl;
-    } else {
-      cout << args[i] << ": not found" << endl;
-      code = 1;
-    }
-  }
-  return code;
-}
-
-int builtin_pwd(const vector<string> &args) {
-  char cwd[PATH_MAX];
-  if (getcwd(cwd, PATH_MAX) != nullptr) {
-    cout << cwd << endl;
-    return 0;
-  }
-  cerr << "pwd: error getting current directory" << endl;
-  return 1;
-}
-
-int builtin_cd(const vector<string> &args) {
-  if (args.empty()) {
-    return 0;
-  }
-  string path = args[0];
-  if (path[0] == '~') {
-    char *home = getenv("HOME");
-    if (!home) {
-      cerr << "cd: HOME not set" << endl;
-      return 1;
-    }
-    path.replace(0, 1, home);
-  }
-  if (chdir(path.c_str()) != 0) {
-    cerr << "cd: " << args[0] << ": " << strerror(errno) << endl;
-    return 1;
-  }
-  return 0;
 }
 
 int execute_external(const string &cmd, const string &path, const vector<string> &args) {
@@ -129,6 +48,7 @@ int execute_external(const string &cmd, const string &path, const vector<string>
   }
   return 127;
 }
+
 } // namespace
 
 namespace command {
@@ -189,8 +109,8 @@ Input parse(const string &input) {
 }
 
 void execute(const string &cmd, const vector<string> &args) {
-  if (is_builtin(cmd)) {
-    builtins[cmd](args);
+  if (builtin::is_builtin(cmd)) {
+    builtin::execute(cmd, args);
     return;
   }
   auto path = find_in_path(cmd);
@@ -200,5 +120,5 @@ void execute(const string &cmd, const vector<string> &args) {
   }
   cout << cmd << ": command not found" << endl;
 }
-} // namespace command
 
+} // namespace command
