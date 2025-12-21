@@ -12,7 +12,6 @@ struct Input {
 };
 
 Input parse(const std::string &input);
-void init();
 void execute(const std::string &cmd, const std::vector<std::string> &args);
 
 } // namespace command

@@ -14,99 +14,114 @@
 #include <unistd.h>
 #include <unordered_map>
 
+using namespace std;
+
 namespace {
-std::unordered_map<std::string, std::function<int(const std::vector<std::string> &)>> builtins;
+// Forward declarations
+int builtin_exit(const vector<string> &args);
+int builtin_echo(const vector<string> &args);
+int builtin_type(const vector<string> &args);
+int builtin_pwd(const vector<string> &args);
+int builtin_cd(const vector<string> &args);
 
-bool is_builtin(const std::string &name) { return builtins.count(name) > 0; }
+unordered_map<string, function<int(const vector<string> &)>> builtins = {
+    {"exit", builtin_exit},
+    {"echo", builtin_echo},
+    {"type", builtin_type},
+    {"pwd", builtin_pwd},
+    {"cd", builtin_cd},
+};
 
-std::optional<std::string> find_in_path(const std::string &cmd) {
-  const char *path_env = std::getenv("PATH");
+bool is_builtin(const string &name) { return builtins.count(name) > 0; }
+
+optional<string> find_in_path(const string &cmd) {
+  const char *path_env = getenv("PATH");
   if (!path_env)
-    return std::nullopt;
+    return nullopt;
 
-  std::istringstream ss(path_env);
-  std::string dir;
-  while (std::getline(ss, dir, ':')) {
-    std::string full_path = dir + "/" + cmd;
+  istringstream ss(path_env);
+  string dir;
+  while (getline(ss, dir, ':')) {
+    string full_path = dir + "/" + cmd;
     if (access(full_path.c_str(), X_OK) == 0) {
       return full_path;
     }
   }
-  return std::nullopt;
+  return nullopt;
 }
 
-int builtin_exit(const std::vector<std::string> &args) {
-  int code = args.empty() ? 0 : std::stoi(args[0]);
-  std::exit(code);
+int builtin_exit(const vector<string> &args) {
+  int code = args.empty() ? 0 : stoi(args[0]);
+  exit(code);
   return code;
 }
 
-int builtin_echo(const std::vector<std::string> &args) {
+int builtin_echo(const vector<string> &args) {
   for (size_t i = 0; i < args.size(); i++) {
     if (i > 0)
-      std::cout << " ";
-    std::cout << args[i];
+      cout << " ";
+    cout << args[i];
   }
-  std::cout << std::endl;
+  cout << endl;
   return 0;
 }
 
-int builtin_type(const std::vector<std::string> &args) {
+int builtin_type(const vector<string> &args) {
   int code = 0;
   for (size_t i = 0; i < args.size(); i++) {
     if (is_builtin(args[i])) {
-      std::cout << args[i] << " is a shell builtin" << std::endl;
+      cout << args[i] << " is a shell builtin" << endl;
     } else if (auto path = find_in_path(args[i])) {
-      std::cout << args[i] << " is " << *path << std::endl;
+      cout << args[i] << " is " << *path << endl;
     } else {
-      std::cout << args[i] << ": not found" << std::endl;
+      cout << args[i] << ": not found" << endl;
       code = 1;
     }
   }
   return code;
 }
 
-int builtin_pwd(const std::vector<std::string> &args) {
+int builtin_pwd(const vector<string> &args) {
   char cwd[PATH_MAX];
   if (getcwd(cwd, PATH_MAX) != nullptr) {
-    std::cout << cwd << std::endl;
+    cout << cwd << endl;
     return 0;
   }
-  std::cerr << "pwd: error getting current directory" << std::endl;
+  cerr << "pwd: error getting current directory" << endl;
   return 1;
 }
 
-int builtin_cd(const std::vector<std::string> &args) {
+int builtin_cd(const vector<string> &args) {
   if (args.empty()) {
     return 0;
   }
-  std::string path = args[0];
+  string path = args[0];
   if (path[0] == '~') {
     char *home = getenv("HOME");
     if (!home) {
-      std::cerr << "cd: HOME not set" << std::endl;
+      cerr << "cd: HOME not set" << endl;
       return 1;
     }
     path.replace(0, 1, home);
   }
   if (chdir(path.c_str()) != 0) {
-    std::cerr << "cd: " << args[0] << ": " << strerror(errno) << std::endl;
+    cerr << "cd: " << args[0] << ": " << strerror(errno) << endl;
     return 1;
   }
   return 0;
 }
 
-int execute_external(const std::string &cmd, const std::string &path, const std::vector<std::string> &args) {
+int execute_external(const string &cmd, const string &path, const vector<string> &args) {
   pid_t pid = fork();
   if (pid == 0) {
-    std::vector<char *> argv;
+    vector<char *> argv;
     argv.push_back(const_cast<char *>(cmd.c_str()));
     for (const auto &arg : args) {
       argv.push_back(const_cast<char *>(arg.c_str()));
     }
     argv.push_back(nullptr);
     execv(path.c_str(), argv.data());
-    std::exit(127);
+    exit(127);
   } else if (pid > 0) {
     int status;
     waitpid(pid, &status, 0);
@@ -118,9 +133,9 @@ int execute_external(const std::string &cmd, const std::string &path, const std:
 
 namespace command {
 
-Input parse(const std::string &input) {
+Input parse(const string &input) {
   Input result;
-  std::string current;
+  string current;
   bool s_quote{false};
   bool d_quote{false};
   bool escaped{false};
@@ -173,15 +188,7 @@ Input parse(const std::string &input) {
   return result;
 }
 
-void init() {
-  builtins["exit"] = builtin_exit;
-  builtins["echo"] = builtin_echo;
-  builtins["type"] = builtin_type;
-  builtins["pwd"] = builtin_pwd;
-  builtins["cd"] = builtin_cd;
-}
-
-void execute(const std::string &cmd, const std::vector<std::string> &args) {
+void execute(const string &cmd, const vector<string> &args) {
   if (is_builtin(cmd)) {
     builtins[cmd](args);
     return;
@@ -191,7 +198,7 @@ void execute(const std::string &cmd, const std::vector<std::string> &args) {
     execute_external(cmd, *path, args);
     return;
   }
-  std::cout << cmd << ": command not found" << std::endl;
+  cout << cmd << ": command not found" << endl;
 }
 } // namespace command
 
