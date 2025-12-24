@@ -50,7 +50,17 @@ unordered_map<string, function<int(const vector<string> &)>> builtins = {
 bool is_builtin_internal(const string &name) { return builtins.count(name) > 0; }
 
 int builtin_exit(const vector<string> &args) {
-  int code = args.empty() ? 0 : stoi(args[0]);
+  int code = 0;
+  if (!args.empty()) {
+    char *end;
+    long val = strtol(args[0].c_str(), &end, 10);
+    if (*end != '\0' || end == args[0].c_str()) {
+      cerr << "exit: " << args[0] << ": numeric argument required" << endl;
+      code = 2;
+    } else {
+      code = static_cast<int>(val & 0xFF);  // Exit codes are modulo 256
+    }
+  }
   exit(code);
   return code;
 }
@@ -80,7 +90,7 @@ int builtin_type(const vector<string> &args) {
   return code;
 }
 
-int builtin_pwd(const vector<string> &args) {
+int builtin_pwd([[maybe_unused]] const vector<string> &args) {
   char cwd[PATH_MAX];
   if (getcwd(cwd, PATH_MAX) != nullptr) {
     cout << cwd << endl;
@@ -117,7 +127,12 @@ namespace builtin {
 bool is_builtin(const string &name) { return is_builtin_internal(name); }
 
 int execute(const string &cmd, const vector<string> &args) {
-  return builtins[cmd](args);
+  auto it = builtins.find(cmd);
+  if (it == builtins.end()) {
+    cerr << "builtin::execute: '" << cmd << "' is not a builtin" << endl;
+    return 127;
+  }
+  return it->second(args);
 }
 
 } // namespace builtin

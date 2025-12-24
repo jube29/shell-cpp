@@ -22,7 +22,7 @@ struct Input {
 };
 
 Input parse(const std::string &input);
-void execute(const std::string &cmd, const std::vector<std::string> &args);
+int execute(const std::string &cmd, const std::vector<std::string> &args);
 
 } // namespace command
 

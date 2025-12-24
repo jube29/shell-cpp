@@ -1,7 +1,9 @@
 #include "command.h"
 #include "builtin.h"
 
+#include <cerrno>
 #include <cstdlib>
+#include <cstring>
 #include <iostream>
 #include <optional>
 #include <sstream>
@@ -32,7 +34,10 @@ optional<string> find_in_path(const string &cmd) {
 
 int execute_external(const string &cmd, const string &path, const vector<string> &args) {
   pid_t pid = fork();
-  if (pid == 0) {
+  if (pid == -1) {
+    cerr << "fork failed: " << strerror(errno) << endl;
+    return 127;
+  } else if (pid == 0) {
     vector<char *> argv;
     argv.push_back(const_cast<char *>(cmd.c_str()));
     for (const auto &arg : args) {
@@ -41,12 +46,11 @@ int execute_external(const string &cmd, const string &path, const vector<string>
     argv.push_back(nullptr);
     execv(path.c_str(), argv.data());
     exit(127);
-  } else if (pid > 0) {
+  } else {
     int status;
     waitpid(pid, &status, 0);
     return WEXITSTATUS(status);
   }
-  return 127;
 }
 
 } // namespace
@@ -143,17 +147,16 @@ Input parse(const string &input) {
   return result;
 }
 
-void execute(const string &cmd, const vector<string> &args) {
+int execute(const string &cmd, const vector<string> &args) {
   if (builtin::is_builtin(cmd)) {
-    builtin::execute(cmd, args);
-    return;
+    return builtin::execute(cmd, args);
   }
   auto path = find_in_path(cmd);
   if (path) {
-    execute_external(cmd, *path, args);
-    return;
+    return execute_external(cmd, *path, args);
   }
   cout << cmd << ": command not found" << endl;
+  return 127;
 }
 
 } // namespace command
