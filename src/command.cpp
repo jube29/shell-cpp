@@ -148,18 +148,18 @@ Input parse(const string &input) {
   return result;
 }
 
-int execute(const string &cmd, const vector<string> &args, const Redirection &redir) {
+int execute(const Input &input) {
   // Setup redirections (RAII - automatically restored when guard goes out of scope)
-  RedirectionGuard guard(redir);
+  RedirectionGuard guard(input.redirection);
 
-  if (builtin::is_builtin(cmd)) {
-    return builtin::execute(cmd, args);
+  if (builtin::is_builtin(input.cmd)) {
+    return builtin::execute(input.cmd, input.args);
   }
-  auto path = find_in_path(cmd);
+  auto path = find_in_path(input.cmd);
   if (path) {
-    return execute_external(cmd, *path, args);
+    return execute_external(input.cmd, *path, input.args);
   }
-  cout << cmd << ": command not found" << endl;
+  cout << input.cmd << ": command not found" << endl;
   return 127;
 }
 

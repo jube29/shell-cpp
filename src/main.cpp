@@ -26,7 +26,7 @@ int main() {
       continue;
     }
 
-    [[maybe_unused]] int exit_code = command::execute(parsed.cmd, parsed.args, parsed.redirection);
+    [[maybe_unused]] int exit_code = command::execute(parsed);
   }
 }
 
