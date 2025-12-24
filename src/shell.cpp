@@ -1,4 +1,4 @@
-#include "command.h"
+#include "shell.h"
 #include "builtin.h"
 #include "redirection_guard.h"
 
@@ -56,10 +56,10 @@ int execute_external(const string &cmd, const string &path, const vector<string>
 
 } // namespace
 
-namespace command {
+namespace shell {
 
-Input parse(const string &input) {
-  Input result;
+ParsedCommand parse(const string &input) {
+  ParsedCommand result;
   string current;
   bool s_quote{false};
   bool d_quote{false};
@@ -148,19 +148,19 @@ Input parse(const string &input) {
   return result;
 }
 
-int execute(const Input &input) {
+int execute(const ParsedCommand &cmd) {
   // Setup redirections (RAII - automatically restored when guard goes out of scope)
-  RedirectionGuard guard(input.redirection);
+  RedirectionGuard guard(cmd.redirection);
 
-  if (builtin::is_builtin(input.cmd)) {
-    return builtin::execute(input.cmd, input.args);
+  if (builtin::is_builtin(cmd.cmd)) {
+    return builtin::execute(cmd.cmd, cmd.args);
   }
-  auto path = find_in_path(input.cmd);
+  auto path = find_in_path(cmd.cmd);
   if (path) {
-    return execute_external(input.cmd, *path, input.args);
+    return execute_external(cmd.cmd, *path, cmd.args);
   }
-  cout << input.cmd << ": command not found" << endl;
+  cout << cmd.cmd << ": command not found" << endl;
   return 127;
 }
 
-} // namespace command
+} // namespace shell

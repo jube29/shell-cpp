@@ -1,4 +1,4 @@
-#include "command.h"
+#include "shell.h"
 
 #include <iostream>
 #include <string>
@@ -21,12 +21,12 @@ int main() {
       break;
     }
 
-    auto parsed = command::parse(input);
+    auto parsed = shell::parse(input);
     if (parsed.cmd.empty()) {
       continue;
     }
 
-    [[maybe_unused]] int exit_code = command::execute(parsed);
+    [[maybe_unused]] int exit_code = shell::execute(parsed);
   }
 }
 
