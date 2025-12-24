@@ -1,5 +1,6 @@
 #include "command.h"
 #include "builtin.h"
+#include "redirection_guard.h"
 
 #include <cerrno>
 #include <cstdlib>
@@ -147,7 +148,10 @@ Input parse(const string &input) {
   return result;
 }
 
-int execute(const string &cmd, const vector<string> &args) {
+int execute(const string &cmd, const vector<string> &args, const Redirection &redir) {
+  // Setup redirections (RAII - automatically restored when guard goes out of scope)
+  RedirectionGuard guard(redir);
+
   if (builtin::is_builtin(cmd)) {
     return builtin::execute(cmd, args);
   }
