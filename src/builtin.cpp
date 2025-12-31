@@ -1,4 +1,5 @@
 #include "builtin.h"
+#include "shell.h"
 
 #include <cstdlib>
 #include <cstring>
@@ -22,22 +23,6 @@ int builtin_pwd(const vector<string> &args);
 int builtin_cd(const vector<string> &args);
 
 bool is_builtin_internal(const string &name);
-
-optional<string> find_in_path(const string &cmd) {
-  const char *path_env = getenv("PATH");
-  if (!path_env)
-    return nullopt;
-
-  istringstream ss(path_env);
-  string dir;
-  while (getline(ss, dir, ':')) {
-    string full_path = dir + "/" + cmd;
-    if (access(full_path.c_str(), X_OK) == 0) {
-      return full_path;
-    }
-  }
-  return nullopt;
-}
 
 unordered_map<string, function<int(const vector<string> &)>> builtins = {
     {"exit", builtin_exit},
@@ -80,7 +65,7 @@ int builtin_type(const vector<string> &args) {
   for (size_t i = 0; i < args.size(); i++) {
     if (is_builtin_internal(args[i])) {
       cout << args[i] << " is a shell builtin" << endl;
-    } else if (auto path = find_in_path(args[i])) {
+    } else if (auto path = shell::find_in_path(args[i])) {
       cout << args[i] << " is " << *path << endl;
     } else {
       cout << args[i] << ": not found" << endl;

@@ -17,22 +17,6 @@ using namespace std;
 
 namespace {
 
-optional<string> find_in_path(const string &cmd) {
-  const char *path_env = getenv("PATH");
-  if (!path_env)
-    return nullopt;
-
-  istringstream ss(path_env);
-  string dir;
-  while (getline(ss, dir, ':')) {
-    string full_path = dir + "/" + cmd;
-    if (access(full_path.c_str(), X_OK) == 0) {
-      return full_path;
-    }
-  }
-  return nullopt;
-}
-
 int execute_external(const string &cmd, const string &path, const vector<string> &args) {
   pid_t pid = fork();
   if (pid == -1) {
@@ -57,6 +41,22 @@ int execute_external(const string &cmd, const string &path, const vector<string>
 } // namespace
 
 namespace shell {
+
+optional<string> find_in_path(const string &cmd) {
+  const char *path_env = getenv("PATH");
+  if (!path_env)
+    return nullopt;
+
+  istringstream ss(path_env);
+  string dir;
+  while (getline(ss, dir, ':')) {
+    string full_path = dir + "/" + cmd;
+    if (access(full_path.c_str(), X_OK) == 0) {
+      return full_path;
+    }
+  }
+  return nullopt;
+}
 
 ParsedCommand parse(const string &input) {
   ParsedCommand result;
