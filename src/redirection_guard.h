@@ -1,29 +1,20 @@
 #ifndef REDIRECTION_GUARD_H
 #define REDIRECTION_GUARD_H
 
+#include "shell.h"
+
 #include <cerrno>
 #include <cstring>
 #include <fcntl.h>
 #include <iostream>
-#include <optional>
-#include <string>
 #include <unistd.h>
 #include <vector>
-
-// Redirection information for a command
-struct Redirection {
-  std::optional<std::string> input_file;  // <
-  std::optional<std::string> output_file; // > or 1>
-  bool append_output = false;             // true for >>, false for >
-  std::optional<std::string> error_file;  // 2>
-  bool append_error = false;              // true for 2>>, false for 2>
-};
 
 // RAII class to manage file descriptor redirections
 // Automatically saves original FDs, redirects them, and restores on destruction
 class RedirectionGuard {
 public:
-  explicit RedirectionGuard(const Redirection &redir) {
+  explicit RedirectionGuard(const shell::Redirection &redir) {
     // Handle stdout redirection (> or >>)
     if (redir.output_file.has_value()) {
       setup_redirection(STDOUT_FILENO, *redir.output_file, redir.append_output);
