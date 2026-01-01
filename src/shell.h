@@ -24,7 +24,6 @@ struct ParsedCommand {
 
 ParsedCommand parse(const std::string &input);
 int execute(const ParsedCommand &cmd);
-std::optional<std::string> find_in_path(const std::string &cmd);
 
 } // namespace shell
 

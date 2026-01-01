@@ -1,5 +1,6 @@
 #include "shell.h"
 #include "builtin.h"
+#include "path.h"
 
 #include <cerrno>
 #include <cstdlib>
@@ -108,22 +109,6 @@ int execute_external(const string &cmd, const string &path, const vector<string>
 
 namespace shell {
 
-optional<string> find_in_path(const string &cmd) {
-  const char *path_env = getenv("PATH");
-  if (!path_env)
-    return nullopt;
-
-  istringstream ss(path_env);
-  string dir;
-  while (getline(ss, dir, ':')) {
-    string full_path = dir + "/" + cmd;
-    if (access(full_path.c_str(), X_OK) == 0) {
-      return full_path;
-    }
-  }
-  return nullopt;
-}
-
 ParsedCommand parse(const string &input) {
   ParsedCommand result;
   string current;
@@ -216,7 +201,7 @@ int execute(const ParsedCommand &cmd) {
   if (builtin::is_builtin(cmd.cmd)) {
     return builtin::execute(cmd.cmd, cmd.args);
   }
-  auto path = find_in_path(cmd.cmd);
+  auto path = path::find_in_path(cmd.cmd);
   if (path) {
     return execute_external(cmd.cmd, *path, cmd.args);
   }

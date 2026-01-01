@@ -1,4 +1,5 @@
 #include "builtin.h"
+#include "path.h"
 #include "shell.h"
 
 #include <cstdlib>
@@ -65,7 +66,7 @@ int builtin_type(const vector<string> &args) {
   for (size_t i = 0; i < args.size(); i++) {
     if (is_builtin_internal(args[i])) {
       cout << args[i] << " is a shell builtin" << endl;
-    } else if (auto path = shell::find_in_path(args[i])) {
+    } else if (auto path = path::find_in_path(args[i])) {
       cout << args[i] << " is " << *path << endl;
     } else {
       cout << args[i] << ": not found" << endl;
