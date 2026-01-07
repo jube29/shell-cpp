@@ -1,6 +1,5 @@
 #include "builtin.h"
 #include "path.h"
-#include "shell.h"
 
 #include <cstdlib>
 #include <cstring>
@@ -8,7 +7,6 @@
 #include <iostream>
 #include <linux/limits.h>
 #include <optional>
-#include <sstream>
 #include <unistd.h>
 #include <unordered_map>
 
@@ -26,11 +24,7 @@ int builtin_cd(const vector<string> &args);
 bool is_builtin_internal(const string &name);
 
 unordered_map<string, function<int(const vector<string> &)>> builtins = {
-    {"exit", builtin_exit},
-    {"echo", builtin_echo},
-    {"type", builtin_type},
-    {"pwd", builtin_pwd},
-    {"cd", builtin_cd},
+    {"exit", builtin_exit}, {"echo", builtin_echo}, {"type", builtin_type}, {"pwd", builtin_pwd}, {"cd", builtin_cd},
 };
 
 bool is_builtin_internal(const string &name) { return builtins.count(name) > 0; }
@@ -44,7 +38,7 @@ int builtin_exit(const vector<string> &args) {
       cerr << "exit: " << args[0] << ": numeric argument required" << endl;
       code = 2;
     } else {
-      code = static_cast<int>(val & 0xFF);  // Exit codes are modulo 256
+      code = static_cast<int>(val & 0xFF); // Exit codes are modulo 256
     }
   }
   exit(code);
@@ -121,4 +115,14 @@ int execute(const string &cmd, const vector<string> &args) {
   return it->second(args);
 }
 
+vector<string> get_builtin_names() {
+  vector<string> names;
+  names.reserve(builtins.size());
+  for (const auto &pair : builtins) {
+    names.push_back(pair.first);
+  }
+  return names;
+}
+
 } // namespace builtin
+

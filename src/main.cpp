@@ -1,3 +1,5 @@
+#include "builtin.h"
+#include "completion.h"
 #include "shell.h"
 
 #include <iostream>
@@ -13,6 +15,8 @@ int main() {
   // Flush after every std::cout / std:cerr
   cout << unitbuf;
   cerr << unitbuf;
+  vector<string> commands = builtin::get_builtin_names();
+  completion::register_commands(commands);
   while (true) {
     cout << constants::PROMPT;
 

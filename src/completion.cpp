@@ -141,11 +141,17 @@ private:
   TrieNode *root_;
 };
 
+Trie cmd_trie;
+
 } // namespace
 
 namespace completion {
 
-// Public implementation will go here
+void register_commands(std::vector<std::string> &cmds) {
+  for (const auto &cmd : cmds) {
+    cmd_trie.insert(cmd);
+  }
+}
 
 } // namespace completion
 
