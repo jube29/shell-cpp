@@ -23,6 +23,28 @@ public:
   // eow setter
   void set_eow(bool value) { eow_ = value; }
 
+  bool has_children() const {
+    for (const TrieNode *child : this->children()) {
+      if (child) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  std::optional<size_t> get_single_child_idx() const {
+    std::optional<size_t> result = std::nullopt;
+    for (auto i{0uz}; i != this->children().size(); i++) {
+      if (!this->children()[i])
+        continue;
+      // 0 is truthy in this context
+      if (result)
+        return std::nullopt;
+      result = i;
+    }
+    return result;
+  }
+
 private:
   TrieNode *parent_;
   std::array<TrieNode *, 26> children_;
@@ -95,14 +117,14 @@ public:
     curr->set_eow(false);
 
     // can't delete if prefix
-    if (has_children(curr)) {
+    if (curr->has_children()) {
       return;
     }
 
     // start from latest word node
     for (auto it = word.rbegin(); it != word.rend(); ++it) {
       // if actually a word or has other children: can't delete
-      if (curr->eow() || has_children(curr)) {
+      if (curr->eow() || curr->has_children()) {
         break;
       }
 
@@ -118,6 +140,28 @@ public:
     }
   }
 
+  std::string complete(const std::string &word) {
+    std::string suffix{};
+    // set curr node to last word char
+    TrieNode *curr = root_;
+    for (auto c : word) {
+      if (curr->children()[c - 'a']) {
+        curr = curr->children()[c - 'a'];
+      } else {
+        return suffix;
+      }
+    }
+
+    // try to complete only when node is a single child and LCP isn't met
+    while (auto opt = curr->get_single_child_idx()) {
+      auto single_child_idx = *opt;
+      curr = curr->children()[single_child_idx];
+      suffix += static_cast<char>(single_child_idx + 'a');
+    }
+
+    return suffix;
+  }
+
 private:
   void delete_subtree(TrieNode *node) {
     if (!node) {
@@ -127,15 +171,6 @@ private:
       delete_subtree(child);
     }
     delete node;
-  }
-
-  bool has_children(const TrieNode *node) const {
-    for (const TrieNode *child : node->children()) {
-      if (child) {
-        return true;
-      }
-    }
-    return false;
   }
 
   TrieNode *root_;
