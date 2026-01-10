@@ -1,7 +1,10 @@
 #include "completion.h"
 
 #include <array>
+#include <cstring>
 #include <optional>
+#include <readline/history.h>
+#include <readline/readline.h>
 #include <string_view>
 
 namespace {
@@ -140,29 +143,41 @@ public:
     }
   }
 
-  std::string complete(const std::string &word) {
-    std::string suffix{};
-    // set curr node to last word char
-    TrieNode *curr = root_;
-    for (auto c : word) {
-      if (curr->children()[c - 'a']) {
-        curr = curr->children()[c - 'a'];
-      } else {
-        return suffix;
-      }
+  void get_all_completions(const std::string_view &prefix, std::vector<std::string> &results) {
+    TrieNode *node = find_prefix(prefix);
+    if (!node) {
+      return;
     }
-
-    // try to complete only when node is a single child and LCP isn't met
-    while (auto opt = curr->get_single_child_idx()) {
-      auto single_child_idx = *opt;
-      curr = curr->children()[single_child_idx];
-      suffix += static_cast<char>(single_child_idx + 'a');
-    }
-
-    return suffix;
+    std::string current(prefix);
+    dfs_collect(node, current, results);
   }
 
 private:
+  TrieNode *find_prefix(const std::string_view &prefix) {
+    TrieNode *curr = root_;
+    for (auto c : prefix) {
+      int idx = c - 'a';
+      if (!curr->children()[idx]) {
+        return nullptr;
+      }
+      curr = curr->children()[idx];
+    }
+    return curr;
+  }
+
+  void dfs_collect(TrieNode *node, std::string &current, std::vector<std::string> &results) {
+    if (node->eow()) {
+      results.push_back(current);
+    }
+    for (size_t i = 0; i < 26; ++i) {
+      if (node->children()[i]) {
+        current.push_back('a' + i);
+        dfs_collect(node->children()[i], current, results);
+        current.pop_back();
+      }
+    }
+  }
+
   void delete_subtree(TrieNode *node) {
     if (!node) {
       return;
@@ -182,10 +197,35 @@ Trie cmd_trie;
 
 namespace completion {
 
-void register_commands(std::vector<std::string> &cmds) {
+void setup() { rl_attempted_completion_function = completer; }
+
+void register_commands(const std::vector<std::string> &cmds) {
   for (const auto &cmd : cmds) {
     cmd_trie.insert(cmd);
   }
+}
+
+// Readline completion generator
+static char *completion_generator(const char *text, int state) {
+  static std::vector<std::string> matches;
+  static size_t index;
+
+  if (state == 0) {
+    matches.clear();
+    index = 0;
+    cmd_trie.get_all_completions(text, matches);
+  }
+
+  if (index < matches.size()) {
+    return strdup(matches[index++].c_str());
+  }
+  return nullptr;
+}
+
+// Readline attempted completion callback
+char **completer(const char *text, int start, int end) {
+  rl_attempted_completion_over = 1; // Disable filename completion
+  return rl_completion_matches(text, completion_generator);
 }
 
 } // namespace completion

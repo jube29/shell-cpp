@@ -6,7 +6,9 @@
 
 namespace completion {
 
+void setup();
 void register_commands(const std::vector<std::string> &cmds);
+char **completer(const char *word, int start, int end);
 
 } // namespace completion
 

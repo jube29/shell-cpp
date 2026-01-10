@@ -2,7 +2,9 @@
 #include "completion.h"
 #include "shell.h"
 
+#include <cstdlib>
 #include <iostream>
+#include <readline/readline.h>
 #include <string>
 
 using namespace std;
@@ -16,13 +18,21 @@ int main() {
   cout << unitbuf;
   cerr << unitbuf;
   vector<string> commands = builtin::get_builtin_names();
+  completion::setup();
   completion::register_commands(commands);
-  while (true) {
-    cout << constants::PROMPT;
 
-    string input;
-    if (!getline(cin, input)) {
-      break;
+  while (true) {
+    char *line = readline(constants::PROMPT);
+
+    if (!line) {
+      break; // EOF (Ctrl+D)
+    }
+
+    string input(line);
+    free(line);
+
+    if (input.empty()) {
+      continue;
     }
 
     auto parsed = shell::parse(input);
