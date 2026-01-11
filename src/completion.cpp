@@ -81,7 +81,7 @@ public:
     return curr->eow();
   }
 
-  bool isPrefix(const std::string_view &word) const {
+  bool is_prefix(const std::string_view &word) const {
     TrieNode *curr = root_;
     for (auto c : word) {
       auto it = curr->children().find(c);
