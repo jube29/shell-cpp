@@ -1,5 +1,6 @@
 #include "builtin.h"
 #include "completion.h"
+#include "path.h"
 #include "shell.h"
 
 #include <cstdlib>
@@ -17,9 +18,14 @@ int main() {
   // Flush after every std::cout / std:cerr
   cout << unitbuf;
   cerr << unitbuf;
-  vector<string> commands = builtin::get_builtin_names();
+
   completion::setup();
+
+  vector<string> commands = builtin::get_builtin_names();
   completion::register_commands(commands);
+
+  vector<string> executables = path::get_all_executables();
+  completion::register_commands(executables);
 
   while (true) {
     char *line = readline(constants::PROMPT);
