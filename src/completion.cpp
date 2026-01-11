@@ -1,56 +1,45 @@
 #include "completion.h"
 
-#include <array>
 #include <cstring>
 #include <optional>
 #include <readline/history.h>
 #include <readline/readline.h>
 #include <string_view>
+#include <unordered_map>
 
 namespace {
 
 class TrieNode {
 public:
   // default constructor
-  TrieNode() : parent_(nullptr), eow_(false) { children_.fill(nullptr); }
+  TrieNode() : parent_(nullptr), eow_(false) {}
   // single argument constructor, no argument type inference
-  explicit TrieNode(TrieNode *parent) : parent_(parent), eow_(false) { children_.fill(nullptr); }
+  explicit TrieNode(TrieNode *parent) : parent_(parent), eow_(false) {}
   // parent getter
   std::optional<TrieNode *> parent() const { return parent_ ? std::optional<TrieNode *>(parent_) : std::nullopt; }
   // children getter
-  std::array<TrieNode *, 26> &children() { return children_; }
+  std::unordered_map<char, TrieNode *> &children() { return children_; }
   // children getter
-  const std::array<TrieNode *, 26> &children() const { return children_; }
+  const std::unordered_map<char, TrieNode *> &children() const { return children_; }
   // eow getter
   bool eow() const { return eow_; }
   // eow setter
   void set_eow(bool value) { eow_ = value; }
 
   bool has_children() const {
-    for (const TrieNode *child : this->children()) {
-      if (child) {
-        return true;
-      }
-    }
-    return false;
+    return !children_.empty();
   }
 
-  std::optional<size_t> get_single_child_idx() const {
-    std::optional<size_t> result = std::nullopt;
-    for (auto i{0uz}; i != this->children().size(); i++) {
-      if (!this->children()[i])
-        continue;
-      // 0 is truthy in this context
-      if (result)
-        return std::nullopt;
-      result = i;
+  std::optional<char> get_single_child_char() const {
+    if (children_.size() != 1) {
+      return std::nullopt;
     }
-    return result;
+    return children_.begin()->first;
   }
 
 private:
   TrieNode *parent_;
-  std::array<TrieNode *, 26> children_;
+  std::unordered_map<char, TrieNode *> children_;
   bool eow_;
 };
 
@@ -72,11 +61,10 @@ public:
   void insert(const std::string_view &word) {
     TrieNode *curr = root_;
     for (auto c : word) {
-      int idx = c - 'a';
-      if (!curr->children()[idx]) {
-        curr->children()[idx] = new TrieNode(curr);
+      if (curr->children().find(c) == curr->children().end()) {
+        curr->children()[c] = new TrieNode(curr);
       }
-      curr = curr->children()[idx];
+      curr = curr->children()[c];
     }
     curr->set_eow(true);
   }
@@ -84,11 +72,11 @@ public:
   bool search(const std::string_view &word) const {
     TrieNode *curr = root_;
     for (auto c : word) {
-      int idx = c - 'a';
-      if (!curr->children()[idx]) {
+      auto it = curr->children().find(c);
+      if (it == curr->children().end()) {
         return false;
       }
-      curr = curr->children()[idx];
+      curr = it->second;
     }
     return curr->eow();
   }
@@ -96,11 +84,11 @@ public:
   bool isPrefix(const std::string_view &word) const {
     TrieNode *curr = root_;
     for (auto c : word) {
-      int idx = c - 'a';
-      if (!curr->children()[idx]) {
+      auto it = curr->children().find(c);
+      if (it == curr->children().end()) {
         return false;
       }
-      curr = curr->children()[idx];
+      curr = it->second;
     }
     return true;
   }
@@ -112,8 +100,7 @@ public:
 
     TrieNode *curr = root_;
     for (auto c : word) {
-      int idx = c - 'a';
-      curr = curr->children()[idx];
+      curr = curr->children()[c];
     }
 
     // word 'removed' form trie
@@ -135,8 +122,7 @@ public:
       auto parent_opt = curr->parent();
       if (parent_opt) {
         auto parent = *parent_opt;
-        int idx = *it - 'a';
-        parent->children()[idx] = nullptr;
+        parent->children().erase(*it);
         delete curr;
         curr = parent;
       }
@@ -156,11 +142,11 @@ private:
   TrieNode *find_prefix(const std::string_view &prefix) {
     TrieNode *curr = root_;
     for (auto c : prefix) {
-      int idx = c - 'a';
-      if (!curr->children()[idx]) {
+      auto it = curr->children().find(c);
+      if (it == curr->children().end()) {
         return nullptr;
       }
-      curr = curr->children()[idx];
+      curr = it->second;
     }
     return curr;
   }
@@ -169,12 +155,10 @@ private:
     if (node->eow()) {
       results.push_back(current);
     }
-    for (size_t i = 0; i < 26; ++i) {
-      if (node->children()[i]) {
-        current.push_back('a' + i);
-        dfs_collect(node->children()[i], current, results);
-        current.pop_back();
-      }
+    for (const auto &[c, child] : node->children()) {
+      current.push_back(c);
+      dfs_collect(child, current, results);
+      current.pop_back();
     }
   }
 
@@ -182,7 +166,7 @@ private:
     if (!node) {
       return;
     }
-    for (TrieNode *child : node->children()) {
+    for (auto &[c, child] : node->children()) {
       delete_subtree(child);
     }
     delete node;
