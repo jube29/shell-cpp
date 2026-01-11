@@ -8,7 +8,6 @@
 #include <fcntl.h>
 #include <iostream>
 #include <optional>
-#include <sstream>
 #include <string>
 #include <sys/types.h>
 #include <sys/wait.h>
