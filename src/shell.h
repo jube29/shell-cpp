@@ -23,7 +23,6 @@ struct ParsedCommand {
 };
 
 ParsedCommand parse(const std::string &input);
-int execute(const ParsedCommand &cmd);
 
 } // namespace shell
 

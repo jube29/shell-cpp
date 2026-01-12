@@ -1,45 +1,9 @@
 #include "shell.h"
-#include "builtin.h"
-#include "path.h"
-#include "redirection_guard.h"
 
-#include <cerrno>
-#include <cstdlib>
-#include <cstring>
-#include <fcntl.h>
-#include <iostream>
 #include <optional>
 #include <string>
-#include <sys/types.h>
-#include <sys/wait.h>
-#include <unistd.h>
 
 using namespace std;
-
-namespace {
-
-int execute_external(const string &cmd, const string &path, const vector<string> &args) {
-  pid_t pid = fork();
-  if (pid == -1) {
-    cerr << "fork failed: " << strerror(errno) << endl;
-    return 127;
-  } else if (pid == 0) {
-    vector<char *> argv;
-    argv.push_back(const_cast<char *>(cmd.c_str()));
-    for (const auto &arg : args) {
-      argv.push_back(const_cast<char *>(arg.c_str()));
-    }
-    argv.push_back(nullptr);
-    execv(path.c_str(), argv.data());
-    exit(127);
-  } else {
-    int status;
-    waitpid(pid, &status, 0);
-    return WEXITSTATUS(status);
-  }
-}
-
-} // namespace
 
 namespace shell {
 
@@ -126,21 +90,6 @@ ParsedCommand parse(const string &input) {
   }
 
   return result;
-}
-
-int execute(const ParsedCommand &cmd) {
-  // Setup redirections (RAII - automatically restored when guard goes out of scope)
-  RedirectionGuard guard(cmd.redirection);
-
-  if (builtin::is_builtin(cmd.cmd)) {
-    return builtin::execute(cmd.cmd, cmd.args);
-  }
-  auto path = path::find_in_path(cmd.cmd);
-  if (path) {
-    return execute_external(cmd.cmd, *path, cmd.args);
-  }
-  cout << cmd.cmd << ": command not found" << endl;
-  return 127;
 }
 
 } // namespace shell
