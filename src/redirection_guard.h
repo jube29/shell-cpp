@@ -15,7 +15,7 @@
 // Automatically saves original FDs, redirects them, and restores on destruction
 class RedirectionGuard {
 public:
-  explicit RedirectionGuard(const shell::Redirection &redir) {
+  explicit RedirectionGuard(const parsing::Redirection &redir) {
     if (redir.output_file.has_value()) {
       setup_redirection(STDOUT_FILENO, *redir.output_file, redir.append_output);
     }

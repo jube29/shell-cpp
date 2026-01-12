@@ -5,7 +5,7 @@
 
 using namespace std;
 
-namespace shell {
+namespace parsing {
 
 ParsedCommand parse(const string &input) {
   ParsedCommand result;
@@ -92,5 +92,5 @@ ParsedCommand parse(const string &input) {
   return result;
 }
 
-} // namespace shell
+} // namespace parsing
 

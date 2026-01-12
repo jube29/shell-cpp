@@ -5,7 +5,7 @@
 #include <string>
 #include <vector>
 
-namespace shell {
+namespace parsing {
 
 // Redirection information for a command
 struct Redirection {
@@ -24,7 +24,7 @@ struct ParsedCommand {
 
 ParsedCommand parse(const std::string &input);
 
-} // namespace shell
+} // namespace parsing
 
 #endif
 

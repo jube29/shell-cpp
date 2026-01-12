@@ -72,7 +72,7 @@ int main() {
       continue;
     }
 
-    auto parsed = shell::parse(input);
+    auto parsed = parsing::parse(input);
     if (parsed.cmd.empty()) {
       continue;
     }
