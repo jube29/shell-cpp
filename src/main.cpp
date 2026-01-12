@@ -82,14 +82,11 @@ int main() {
     [[maybe_unused]] int exit_code;
     if (builtin::is_builtin(parsed.cmd)) {
       exit_code = builtin::execute(parsed.cmd, parsed.args);
+    } else if (auto path = path::find_in_path(parsed.cmd)) {
+      exit_code = execute_external(parsed.cmd, *path, parsed.args);
     } else {
-      auto path = path::find_in_path(parsed.cmd);
-      if (path) {
-        exit_code = execute_external(parsed.cmd, *path, parsed.args);
-      } else {
-        cout << parsed.cmd << ": command not found" << endl;
-        exit_code = 127;
-      }
+      cout << parsed.cmd << ": command not found" << endl;
+      exit_code = 127;
     }
   }
 }
