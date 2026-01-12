@@ -1,6 +1,7 @@
 #include "shell.h"
 #include "builtin.h"
 #include "path.h"
+#include "redirection_guard.h"
 
 #include <cerrno>
 #include <cstdlib>
@@ -16,72 +17,6 @@
 using namespace std;
 
 namespace {
-
-// RAII class to manage file descriptor redirections
-// Automatically saves original FDs, redirects them, and restores on destruction
-class RedirectionGuard {
-public:
-  explicit RedirectionGuard(const shell::Redirection &redir) {
-    if (redir.output_file.has_value()) {
-      setup_redirection(STDOUT_FILENO, *redir.output_file, redir.append_output);
-    }
-
-    if (redir.error_file.has_value()) {
-      setup_redirection(STDERR_FILENO, *redir.error_file, redir.append_error);
-    }
-
-    // TODO: Handle stdin redirection (<) when needed
-  }
-
-  ~RedirectionGuard() { restore(); }
-
-  RedirectionGuard(const RedirectionGuard &) = delete;
-  RedirectionGuard &operator=(const RedirectionGuard &) = delete;
-
-private:
-  void setup_redirection(int fd, const string &filename, bool append) {
-    int saved = dup(fd);
-    if (saved == -1) {
-      cerr << "Warning: failed to save fd " << fd << ": " << strerror(errno) << endl;
-      return;
-    }
-
-    int flags = O_WRONLY | O_CREAT | (append ? O_APPEND : O_TRUNC);
-    int file = open(filename.c_str(), flags, 0644);
-    if (file == -1) {
-      cerr << "Failed to open " << filename << ": " << strerror(errno) << endl;
-      close(saved);
-      return;
-    }
-
-    if (dup2(file, fd) == -1) {
-      cerr << "Failed to redirect fd " << fd << ": " << strerror(errno) << endl;
-      close(file);
-      close(saved);
-      return;
-    }
-
-    close(file);
-    saved_fds_.push_back({fd, saved});
-  }
-
-  void restore() {
-    for (auto it = saved_fds_.rbegin(); it != saved_fds_.rend(); ++it) {
-      if (dup2(it->saved, it->original) == -1) {
-        cerr << "Warning: failed to restore fd " << it->original << endl;
-      }
-      close(it->saved);
-    }
-    saved_fds_.clear();
-  }
-
-  struct SavedFD {
-    int original; // The original FD number (STDOUT_FILENO or STDERR_FILENO)
-    int saved;    // The dup'd FD to restore from
-  };
-
-  vector<SavedFD> saved_fds_;
-};
 
 int execute_external(const string &cmd, const string &path, const vector<string> &args) {
   pid_t pid = fork();
