@@ -57,4 +57,12 @@ vector<string> get_all_executables() {
   return vector<string>(executables.begin(), executables.end());
 }
 
+optional<string> home_path() {
+  const char *home_env = getenv("HOME");
+  if (!home_env) {
+    return nullopt;
+  }
+  return string(home_env);
+}
 } // namespace path
+
