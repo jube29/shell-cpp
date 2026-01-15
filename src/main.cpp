@@ -90,7 +90,7 @@ int main() {
   completion::register_commands(executables);
 
   const optional<string> home_path = path::home_path();
-  history_file_name = *home_path + "/.history";
+  history_file_name = *home_path + "/.shell_cpp_history";
   if (!home_path) {
     history_enabled = false;
   }

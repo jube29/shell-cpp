@@ -103,13 +103,28 @@ int builtin_cd(const vector<string> &args) {
 }
 
 int builtin_history(const vector<string> &args) {
-  HIST_ENTRY **entries = history_list();
-  if (!entries) {
+  HISTORY_STATE *state = history_get_history_state();
+  if (!state) {
     return 1;
   }
-  for (int i{0}; entries[i] != nullptr; ++i) {
-    cout << i + 1 << "  " << entries[i]->line << endl;
+  optional<int> offset = nullopt;
+  if (args.size() > 0) {
+    char *ptr;
+    offset = (int)strtol(args[0].c_str(), &ptr, 10);
+    if (*ptr != '\0') {
+      cerr << "history: " << args[0] << ": invalid number" << endl;
+      return 1;
+    }
+    if (offset < 0) {
+      cerr << "history: " << args[0] << ": negative number" << endl;
+      return 1;
+    }
   }
+  int start = offset ? max(state->length - *offset, 0) : 0;
+  for (auto i = start; state->entries[i] != nullptr; ++i) {
+    cout << i + 1 << "  " << state->entries[i]->line << endl;
+  }
+  free(state);
   return 0;
 }
 
