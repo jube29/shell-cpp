@@ -20,12 +20,13 @@ int builtin_echo(const vector<string> &args);
 int builtin_type(const vector<string> &args);
 int builtin_pwd(const vector<string> &args);
 int builtin_cd(const vector<string> &args);
+int builtin_history(const vector<string> &args);
 
 bool is_builtin_internal(const string &name);
 
 unordered_map<string, function<int(const vector<string> &)>> builtins = {
-    {"exit", builtin_exit}, {"echo", builtin_echo}, {"type", builtin_type}, {"pwd", builtin_pwd}, {"cd", builtin_cd},
-};
+    {"exit", builtin_exit}, {"echo", builtin_echo}, {"type", builtin_type},
+    {"pwd", builtin_pwd},   {"cd", builtin_cd},     {"history", builtin_history}};
 
 bool is_builtin_internal(const string &name) { return builtins.count(name) > 0; }
 
@@ -99,6 +100,8 @@ int builtin_cd(const vector<string> &args) {
   }
   return 0;
 }
+
+int builtin_history(const vector<string> &args) { return 0; }
 
 } // namespace
 
