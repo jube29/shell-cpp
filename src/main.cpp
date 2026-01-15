@@ -9,6 +9,7 @@
 #include <cstring>
 #include <iostream>
 #include <readline/readline.h>
+#include <sstream>
 #include <string>
 #include <sys/types.h>
 #include <sys/wait.h>
@@ -37,6 +38,30 @@ int execute_external(const string &cmd, const string &path, const vector<string>
     waitpid(pid, &status, 0);
     return WEXITSTATUS(status);
   }
+}
+
+int execute(const parsing::ParsedCommand &parsed) {
+  int exit_code;
+  if (builtin::is_builtin(parsed.cmd)) {
+    exit_code = builtin::execute(parsed.cmd, parsed.args);
+  } else if (auto path = path::find_in_path(parsed.cmd)) {
+    exit_code = execute_external(parsed.cmd, *path, parsed.args);
+  } else {
+    cout << parsed.cmd << ": command not found" << endl;
+    exit_code = 127;
+  }
+  return exit_code;
+}
+
+void trim(string &str) {
+  constexpr auto whitespace = " \t\n\r";
+  auto start = str.find_first_not_of(whitespace);
+  if (start == string::npos) {
+    str.clear();
+    return;
+  }
+  str.erase(0, start);
+  str.erase(str.find_last_not_of(whitespace) + 1);
 }
 
 } // namespace
@@ -72,21 +97,79 @@ int main() {
       continue;
     }
 
-    auto parsed = parsing::parse(input);
-    if (parsed.cmd.empty()) {
-      continue;
+    istringstream ss(input);
+    string sub_command;
+    vector<parsing::ParsedCommand> sub_commands{};
+
+    while (getline(ss, sub_command, '|')) {
+      trim(sub_command);
+      auto parsed = parsing::parse(sub_command);
+      sub_commands.push_back(parsed);
     }
 
-    RedirectionGuard guard(parsed.redirection);
+    if (sub_commands.empty() || sub_commands[0].cmd.empty())
+      continue;
 
-    [[maybe_unused]] int exit_code;
-    if (builtin::is_builtin(parsed.cmd)) {
-      exit_code = builtin::execute(parsed.cmd, parsed.args);
-    } else if (auto path = path::find_in_path(parsed.cmd)) {
-      exit_code = execute_external(parsed.cmd, *path, parsed.args);
-    } else {
-      cout << parsed.cmd << ": command not found" << endl;
-      exit_code = 127;
+    const auto N = sub_commands.size();
+    if (N == 1) {
+      RedirectionGuard guard(sub_commands[0].redirection);
+      [[maybe_unused]] auto code = execute(sub_commands[0]);
+      continue;
+    }
+    using FileDescriptor = int;
+    std::optional<FileDescriptor> read_from = std::nullopt;
+    std::optional<FileDescriptor> write_to = std::nullopt;
+    vector<pid_t> to_wait{};
+
+    for (auto i{0uz}; i != N; i++) {
+      FileDescriptor fd[2];
+      if (i < N - 1) {
+        pipe(fd);
+        write_to = fd[1];
+      } else {
+        write_to = std::nullopt;
+      }
+      auto pid = fork();
+      if (pid == -1) { // FORK ERROR
+        close(fd[0]), close(fd[1]);
+        cerr << "Fork error, exiting.";
+      } else if (pid == 0) { // CHILD
+        if (read_from) {
+          dup2(*read_from, STDIN_FILENO);
+        }
+        if (write_to) {
+          dup2(*write_to, STDOUT_FILENO);
+        }
+        RedirectionGuard guard(sub_commands[i].redirection);
+        [[maybe_unused]] auto code = execute(sub_commands[i]);
+        if (read_from) {
+          close(*read_from);
+        }
+        if (write_to) {
+          close(*write_to);
+        }
+        exit(code);
+      } else { // PARENT
+        if (i < N - 1) {
+          if (write_to) {
+            close(*write_to);
+          }
+          if (read_from) {
+            close(*read_from);
+          }
+          read_from = fd[0];
+        }
+        to_wait.push_back(pid);
+      }
+    }
+    if (read_from) {
+      close(*read_from);
+    }
+    if (to_wait.size()) {
+      for (auto child_pid : to_wait) {
+        int status;
+        waitpid(child_pid, &status, 0);
+      }
     }
   }
 }
