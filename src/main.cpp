@@ -8,6 +8,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <iostream>
+#include <readline/history.h>
 #include <readline/readline.h>
 #include <sstream>
 #include <string>
@@ -64,6 +65,11 @@ void trim(string &str) {
   str.erase(str.find_last_not_of(whitespace) + 1);
 }
 
+void history_w_atexit() { write_history(nullptr); }
+
+bool history_enabled = true;
+
+static string history_file_name;
 } // namespace
 
 namespace constants {
@@ -83,11 +89,30 @@ int main() {
   vector<string> executables = path::get_all_executables();
   completion::register_commands(executables);
 
+  const optional<string> home_path = path::home_path();
+  history_file_name = *home_path + "/.history";
+  if (!home_path) {
+    history_enabled = false;
+  }
+  if (history_enabled && !fopen(history_file_name.c_str(), "a+")) {
+    history_enabled = false;
+  }
+  if (history_enabled && read_history(history_file_name.c_str()) != 0) {
+    history_enabled = false;
+  }
+  if (history_enabled) {
+    atexit([]() { (void)write_history(history_file_name.c_str()); });
+  }
+
   while (true) {
     char *line = readline(constants::PROMPT);
 
     if (!line) {
       break; // EOF (Ctrl+D)
+    }
+
+    if (history_enabled) {
+      add_history(line);
     }
 
     string input(line);

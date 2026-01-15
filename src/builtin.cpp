@@ -7,6 +7,7 @@
 #include <iostream>
 #include <linux/limits.h>
 #include <optional>
+#include <readline/history.h>
 #include <unistd.h>
 #include <unordered_map>
 
@@ -101,7 +102,16 @@ int builtin_cd(const vector<string> &args) {
   return 0;
 }
 
-int builtin_history(const vector<string> &args) { return 0; }
+int builtin_history(const vector<string> &args) {
+  HIST_ENTRY **entries = history_list();
+  if (!entries) {
+    return 1;
+  }
+  for (int i{0}; entries[i] != nullptr; ++i) {
+    cout << i + 1 << "  " << entries[i]->line << endl;
+  }
+  return 0;
+}
 
 } // namespace
 
