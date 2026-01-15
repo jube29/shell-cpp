@@ -1,8 +1,8 @@
 #include "builtin.h"
 #include "completion.h"
+#include "parsing.h"
 #include "path.h"
 #include "redirection_guard.h"
-#include "shell.h"
 
 #include <cerrno>
 #include <cstdlib>

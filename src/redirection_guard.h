@@ -1,7 +1,7 @@
 #ifndef REDIRECTION_GUARD_H
 #define REDIRECTION_GUARD_H
 
-#include "shell.h"
+#include "parsing.h"
 
 #include <cerrno>
 #include <cstring>
@@ -78,3 +78,4 @@ private:
 };
 
 #endif
+
