@@ -65,8 +65,6 @@ void trim(string &str) {
   str.erase(str.find_last_not_of(whitespace) + 1);
 }
 
-void history_w_atexit() { write_history(nullptr); }
-
 bool history_enabled = true;
 
 static string history_file_name;
@@ -101,7 +99,8 @@ int main() {
     history_enabled = false;
   }
   if (history_enabled) {
-    atexit([]() { (void)write_history(history_file_name.c_str()); });
+    // temp comment in order to pass current stage that doesnt expect persistence yet
+    // atexit([]() { (void)write_history(history_file_name.c_str()); });
   }
 
   while (true) {
