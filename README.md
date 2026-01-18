@@ -1,34 +1,102 @@
-[![progress-banner](https://backend.codecrafters.io/progress/shell/52b81273-d823-42a3-b6f4-af19f2aa59b0)](https://app.codecrafters.io/users/codecrafters-bot?r=2qF)
+# C++23 Shell
 
-This is a starting point for C++ solutions to the
-["Build Your Own Shell" Challenge](https://app.codecrafters.io/courses/shell/overview).
+A POSIX-compliant shell implementation in C++23, built as part of the [CodeCrafters](https://codecrafters.io/) challenge.
 
-In this challenge, you'll build your own POSIX compliant shell that's capable of
-interpreting shell commands, running external programs and builtin commands like
-cd, pwd, echo and more. Along the way, you'll learn about shell command parsing,
-REPLs, builtin commands, and more.
+## Features
 
-**Note**: If you're viewing this repo on GitHub, head over to
-[codecrafters.io](https://codecrafters.io) to try the challenge.
+- **Builtins**: `exit`, `echo`, `type`, `pwd`, `cd`, `history`
+- **Pipes**: Full pipeline support (`cmd1 | cmd2 | cmd3`)
+- **Redirections**: `>`, `>>`, `2>`, `2>>`, `1>`, `1>>`
+- **Tab completion**: Trie-based command completion
+- **History**: Persistent history with readline integration
 
-# Passing the first stage
+## Shell concepts
 
-The entry point for your `shell` implementation is in `src/main.cpp`. Study and
-uncomment the relevant code, and push your changes to pass the first stage:
+| Concept | Implementation |
+|---------|----------------|
+| Pipeline execution | `fork()` + `pipe()` + `dup2()` chaining |
+| File redirections | RAII guard with FD save/restore |
+| PATH resolution | Linear search with `access(X_OK)` |
+| Quoting | State machine (single/double quotes, escapes) |
+| History | readline API with file persistence |
 
-```sh
-git commit -am "pass 1st stage" # any msg
-git push origin master
+## C++23 highlights
+
+- `std::optional<T>` for nullable values (PATH lookups, pipe FDs, Trie navigation)
+- Structured bindings in range-based loops
+- Designated initializers for `Redirection` struct
+- `std::unique_ptr` with custom deleter for readline memory
+- `std::string_view` for zero-copy string operations
+
+## Notable design patterns
+
+### Trie for tab completion
+
+Prefix tree storing all builtins and PATH executables. 
+
+**Space complexity:** O(K × M × N) where K = average children per node, M = average string length, N = stored words.
+
+```
+insert("echo"), insert("exit"), insert("env")
+
+       (root)
+         |
+         e
+        / \
+       c   x/n
+       |    |
+       h    i/v
+       |    |
+       o    t
 ```
 
-Time to move on to the next stage!
+For sparse Tries (few children per node, or large alphabets like Unicode) unordered_map is more space-efficient
+For dense Tries (most nodes have many children, small alphabet) array-based approach may be more space-efficient despite wasted slots
 
-# Stage 2 & beyond
+### RedirectionGuard (RAII)
 
-Note: This section is for stages 2 and beyond.
+Header-only class managing file descriptor redirections:
+- Saves original FDs via `dup()` on construction
+- Opens target files with appropriate flags
+- Redirects via `dup2()`
+- Restores original FDs on destruction (exception-safe)
 
-1. Ensure you have `cmake` installed locally
-1. Run `./your_program.sh` to run your program, which is implemented in
-   `src/main.cpp`.
-1. Commit your changes and run `git push origin master` to submit your solution
-   to CodeCrafters. Test output will be streamed to your terminal.
+### Pipeline Execution
+
+```
+cmd1 | cmd2 | cmd3
+
+[cmd1] --pipe--> [cmd2] --pipe--> [cmd3]
+  |                |                |
+fork+exec      fork+exec        fork+exec
+  stdout→pipe    stdin←pipe      stdin←pipe
+                 stdout→pipe
+```
+
+## Dependencies
+
+- CMake 3.13+
+- C++23 compiler
+- readline library (`libreadline-dev` on Debian/Ubuntu)
+
+## Build
+
+```bash
+cmake -B build -S .
+cmake --build build
+```
+
+## Project Structure
+
+```
+src/
+├── main.cpp             # REPL loop, readline setup
+├── parsing.cpp/h        # Tokenizer with quote handling
+├── execution.cpp/h      # fork/exec, pipeline orchestration
+├── builtin.cpp/h        # Shell builtins
+├── path.cpp/h           # PATH search, home expansion
+├── completion.cpp/h     # Trie + readline completion
+├── command.h            # ParsedCommand, Redirection types
+└── redirection_guard.h  # RAII FD management
+```
+
