@@ -26,9 +26,7 @@ public:
   // eow setter
   void set_eow(bool value) { eow_ = value; }
 
-  bool has_children() const {
-    return !children_.empty();
-  }
+  bool has_children() const { return !children_.empty(); }
 
   std::optional<char> get_single_child_char() const {
     if (children_.size() != 1) {
@@ -67,66 +65,6 @@ public:
       curr = curr->children()[c];
     }
     curr->set_eow(true);
-  }
-
-  bool search(const std::string_view &word) const {
-    TrieNode *curr = root_;
-    for (auto c : word) {
-      auto it = curr->children().find(c);
-      if (it == curr->children().end()) {
-        return false;
-      }
-      curr = it->second;
-    }
-    return curr->eow();
-  }
-
-  bool is_prefix(const std::string_view &word) const {
-    TrieNode *curr = root_;
-    for (auto c : word) {
-      auto it = curr->children().find(c);
-      if (it == curr->children().end()) {
-        return false;
-      }
-      curr = it->second;
-    }
-    return true;
-  }
-
-  void remove(const std::string_view &word) {
-    if (!search(word)) {
-      return;
-    }
-
-    TrieNode *curr = root_;
-    for (auto c : word) {
-      curr = curr->children()[c];
-    }
-
-    // word 'removed' form trie
-    curr->set_eow(false);
-
-    // can't delete if prefix
-    if (curr->has_children()) {
-      return;
-    }
-
-    // start from latest word node
-    for (auto it = word.rbegin(); it != word.rend(); ++it) {
-      // if actually a word or has other children: can't delete
-      if (curr->eow() || curr->has_children()) {
-        break;
-      }
-
-      // move to parent node and delete corresponding child
-      auto parent_opt = curr->parent();
-      if (parent_opt) {
-        auto parent = *parent_opt;
-        parent->children().erase(*it);
-        delete curr;
-        curr = parent;
-      }
-    }
   }
 
   void get_all_completions(const std::string_view &prefix, std::vector<std::string> &results) {
