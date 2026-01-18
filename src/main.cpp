@@ -87,7 +87,7 @@ int main() {
   completion::register_commands(executables);
 
   if (char *history_file = getenv("HISTFILE"); history_file && read_history(history_file) == 0) {
-    // atexit([]() { (void)write_history(history_file_name.c_str()); });
+    atexit([]() { write_history(getenv("HISTFILE")); });
   }
 
   while (true) {
