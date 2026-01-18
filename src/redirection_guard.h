@@ -1,7 +1,7 @@
 #ifndef REDIRECTION_GUARD_H
 #define REDIRECTION_GUARD_H
 
-#include "parsing.h"
+#include "command.h"
 
 #include <cerrno>
 #include <cstring>
@@ -11,11 +11,13 @@
 #include <unistd.h>
 #include <vector>
 
+using namespace command;
+
 // RAII class to manage file descriptor redirections
 // Automatically saves original FDs, redirects them, and restores on destruction
 class RedirectionGuard {
 public:
-  explicit RedirectionGuard(const parsing::Redirection &redir) {
+  explicit RedirectionGuard(const Redirection &redir) {
     if (redir.output_file.has_value()) {
       setup_redirection(STDOUT_FILENO, *redir.output_file, redir.append_output);
     }

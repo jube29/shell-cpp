@@ -1,4 +1,5 @@
 #include "builtin.h"
+#include "command.h"
 #include "completion.h"
 #include "parsing.h"
 #include "path.h"
@@ -41,7 +42,7 @@ int execute_external(const string &cmd, const string &path, const vector<string>
   }
 }
 
-int execute(const parsing::ParsedCommand &parsed) {
+int execute(const ParsedCommand &parsed) {
   int exit_code;
   if (builtin::is_builtin(parsed.cmd)) {
     exit_code = builtin::execute(parsed.cmd, parsed.args);
@@ -110,7 +111,7 @@ int main() {
 
     istringstream ss(input);
     string sub_command;
-    vector<parsing::ParsedCommand> sub_commands{};
+    vector<ParsedCommand> sub_commands{};
 
     while (getline(ss, sub_command, '|')) {
       trim(sub_command);

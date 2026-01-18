@@ -1,9 +1,11 @@
 #include "parsing.h"
+#include "command.h"
 
 #include <optional>
 #include <string>
 
 using namespace std;
+using namespace command;
 
 namespace parsing {
 
