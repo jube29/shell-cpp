@@ -118,6 +118,17 @@ int builtin_history(const vector<string> &args) {
     }
     return 0;
   }
+  if (!args.empty() && args[0] == "-w") {
+    if (args.size() < 2) {
+      cerr << "history: " << args[0] << ": option requires an argument" << endl;
+      return 1;
+    }
+    if (write_history(args[1].c_str()) != 0) {
+      cerr << "history: " << args[1] << ": " << strerror(errno) << endl;
+      return 1;
+    }
+    return 0;
+  }
   optional<int> offset = nullopt;
   if (!args.empty()) {
     char *ptr;
