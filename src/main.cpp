@@ -9,6 +9,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <iostream>
+#include <memory>
 #include <readline/history.h>
 #include <readline/readline.h>
 #include <sstream>
@@ -92,18 +93,17 @@ int main() {
   }
 
   while (true) {
-    char *line = readline(constants::PROMPT);
+    unique_ptr<char, decltype(&free)> line(readline(constants::PROMPT), free);
 
     if (!line) {
       break; // EOF (Ctrl+D)
     }
 
     if (history_enabled) {
-      add_history(line);
+      add_history(line.get());
     }
 
-    string input(line);
-    free(line);
+    string input(line.get());
 
     if (input.empty()) {
       continue;
