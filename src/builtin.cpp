@@ -6,6 +6,7 @@
 #include <functional>
 #include <iostream>
 #include <linux/limits.h>
+#include <memory>
 #include <optional>
 #include <readline/history.h>
 #include <unistd.h>
@@ -105,48 +106,24 @@ int builtin_cd(const vector<string> &args) {
 }
 
 int builtin_history(const vector<string> &args) {
-  HISTORY_STATE *state = history_get_history_state();
+  unique_ptr<HISTORY_STATE, decltype(&free)> state(history_get_history_state(), free);
   if (!state) {
+    cerr << "history: could not get history state" << endl;
     return 1;
   }
-  if (!args.empty() && args[0] == "-r") {
-    if (args.size() < 2) {
-      cerr << "history: " << args[0] << ": option requires an argument" << endl;
-      return 1;
-    }
-    if (read_history(args[1].c_str()) != 0) {
-      cerr << "history: " << args[1] << ": " << strerror(errno) << endl;
-      return 1;
+  if (args.empty()) {
+    for (auto i{0uz}; state->entries[i] != nullptr; ++i) {
+      cout << i + 1 << "  " << state->entries[i]->line << endl;
     }
     return 0;
   }
-  if (!args.empty() && args[0] == "-w") {
-    if (args.size() < 2) {
+  if (args.size() == 1) {
+    if (args[0] == "-r" || args[0] == "-w" || args[0] == "-a") {
       cerr << "history: " << args[0] << ": option requires an argument" << endl;
       return 1;
     }
-    if (write_history(args[1].c_str()) != 0) {
-      cerr << "history: " << args[1] << ": " << strerror(errno) << endl;
-      return 1;
-    }
-    return 0;
-  }
-  if (!args.empty() && args[0] == "-a") {
-    if (args.size() < 2) {
-      cerr << "history: " << args[0] << ": option requires an argument" << endl;
-      return 1;
-    }
-    if (append_history(state->length - history_last_append_idx, args[1].c_str()) != 0) {
-      cerr << "history: " << args[1] << ": " << strerror(errno) << endl;
-      return 1;
-    }
-    history_last_append_idx = state->length;
-    return 0;
-  }
-  optional<int> offset = nullopt;
-  if (!args.empty()) {
     char *ptr;
-    offset = (int)strtol(args[0].c_str(), &ptr, 10);
+    int offset = (int)strtol(args[0].c_str(), &ptr, 10);
     if (*ptr != '\0') {
       cerr << "history: " << args[0] << ": invalid number" << endl;
       return 1;
@@ -155,13 +132,35 @@ int builtin_history(const vector<string> &args) {
       cerr << "history: " << args[0] << ": negative number" << endl;
       return 1;
     }
+    int start = offset ? max(state->length - offset, 0) : 0;
+    for (auto i = start; state->entries[i] != nullptr; ++i) {
+      cout << i + 1 << "  " << state->entries[i]->line << endl;
+    }
+    return 0;
   }
-  int start = offset ? max(state->length - *offset, 0) : 0;
-  for (auto i = start; state->entries[i] != nullptr; ++i) {
-    cout << i + 1 << "  " << state->entries[i]->line << endl;
+  if (args.size() == 2) {
+    int result;
+    if (args[0] == "-r") {
+      result = read_history(args[1].c_str());
+    } else if (args[0] == "-w") {
+      result = write_history(args[1].c_str());
+    } else if (args[0] == "-a") {
+      result = append_history(state->length - history_last_append_idx, args[1].c_str());
+      if (result == 0) {
+        history_last_append_idx = state->length;
+      }
+    } else {
+      cerr << "history: unknown flag" << endl;
+      return 1;
+    }
+    if (result != 0) {
+      cerr << "history: " << args[1] << ": " << strerror(errno) << endl;
+      return 1;
+    }
+    return 0;
   }
-  free(state);
-  return 0;
+  cerr << "history: too many arguments" << endl;
+  return 1;
 }
 
 } // namespace
