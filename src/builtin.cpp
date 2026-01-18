@@ -15,6 +15,8 @@ using namespace std;
 
 namespace {
 
+int history_last_append_idx = 0;
+
 // Forward declarations
 int builtin_exit(const vector<string> &args);
 int builtin_echo(const vector<string> &args);
@@ -127,6 +129,18 @@ int builtin_history(const vector<string> &args) {
       cerr << "history: " << args[1] << ": " << strerror(errno) << endl;
       return 1;
     }
+    return 0;
+  }
+  if (!args.empty() && args[0] == "-a") {
+    if (args.size() < 2) {
+      cerr << "history: " << args[0] << ": option requires an argument" << endl;
+      return 1;
+    }
+    if (append_history(state->length - history_last_append_idx, args[1].c_str()) != 0) {
+      cerr << "history: " << args[1] << ": " << strerror(errno) << endl;
+      return 1;
+    }
+    history_last_append_idx = state->length;
     return 0;
   }
   optional<int> offset = nullopt;
