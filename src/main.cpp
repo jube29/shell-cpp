@@ -8,6 +8,7 @@
 #include <cerrno>
 #include <cstdlib>
 #include <cstring>
+#include <functional>
 #include <iostream>
 #include <memory>
 #include <readline/history.h>
@@ -55,6 +56,65 @@ int execute(const ParsedCommand &parsed) {
   }
   return exit_code;
 }
+
+void execute_pipeline(const vector<ParsedCommand> &cmds, const function<int(const ParsedCommand &)> &executor) {
+  int N = cmds.size();
+  using FileDescriptor = int;
+  std::optional<FileDescriptor> read_from = std::nullopt;
+  std::optional<FileDescriptor> write_to = std::nullopt;
+  vector<pid_t> to_wait{};
+
+  for (auto i{0uz}; i != N; i++) {
+    FileDescriptor fd[2];
+    if (i < N - 1) {
+      pipe(fd);
+      write_to = fd[1];
+    } else {
+      write_to = std::nullopt;
+    }
+    auto pid = fork();
+    if (pid == -1) { // FORK ERROR
+      close(fd[0]), close(fd[1]);
+      cerr << "Fork error, exiting.";
+    } else if (pid == 0) { // CHILD
+      if (read_from) {
+        dup2(*read_from, STDIN_FILENO);
+      }
+      if (write_to) {
+        dup2(*write_to, STDOUT_FILENO);
+      }
+      int code = executor(cmds[i]);
+      if (read_from) {
+        close(*read_from);
+      }
+      if (write_to) {
+        close(*write_to);
+      }
+      exit(code);
+    } else { // PARENT
+      if (i < N - 1) {
+        if (write_to) {
+          close(*write_to);
+        }
+        if (read_from) {
+          close(*read_from);
+        }
+        read_from = fd[0];
+      }
+      to_wait.push_back(pid);
+    }
+  }
+  if (read_from) {
+    close(*read_from);
+  }
+  if (to_wait.size()) {
+    for (auto child_pid : to_wait) {
+      int status;
+      waitpid(child_pid, &status, 0);
+    }
+  }
+
+} // namespace
 
 void trim(string &str) {
   constexpr auto whitespace = " \t\n\r";
@@ -126,62 +186,11 @@ int main() {
     if (N == 1) {
       RedirectionGuard guard(sub_commands[0].redirection);
       [[maybe_unused]] auto code = execute(sub_commands[0]);
-      continue;
-    }
-    using FileDescriptor = int;
-    std::optional<FileDescriptor> read_from = std::nullopt;
-    std::optional<FileDescriptor> write_to = std::nullopt;
-    vector<pid_t> to_wait{};
-
-    for (auto i{0uz}; i != N; i++) {
-      FileDescriptor fd[2];
-      if (i < N - 1) {
-        pipe(fd);
-        write_to = fd[1];
-      } else {
-        write_to = std::nullopt;
-      }
-      auto pid = fork();
-      if (pid == -1) { // FORK ERROR
-        close(fd[0]), close(fd[1]);
-        cerr << "Fork error, exiting.";
-      } else if (pid == 0) { // CHILD
-        if (read_from) {
-          dup2(*read_from, STDIN_FILENO);
-        }
-        if (write_to) {
-          dup2(*write_to, STDOUT_FILENO);
-        }
-        RedirectionGuard guard(sub_commands[i].redirection);
-        [[maybe_unused]] auto code = execute(sub_commands[i]);
-        if (read_from) {
-          close(*read_from);
-        }
-        if (write_to) {
-          close(*write_to);
-        }
-        exit(code);
-      } else { // PARENT
-        if (i < N - 1) {
-          if (write_to) {
-            close(*write_to);
-          }
-          if (read_from) {
-            close(*read_from);
-          }
-          read_from = fd[0];
-        }
-        to_wait.push_back(pid);
-      }
-    }
-    if (read_from) {
-      close(*read_from);
-    }
-    if (to_wait.size()) {
-      for (auto child_pid : to_wait) {
-        int status;
-        waitpid(child_pid, &status, 0);
-      }
+    } else {
+      execute_pipeline(sub_commands, [&](const ParsedCommand &cmd) {
+        RedirectionGuard guard(cmd.redirection);
+        return execute(cmd);
+      });
     }
   }
 }
