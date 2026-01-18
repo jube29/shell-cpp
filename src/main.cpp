@@ -67,7 +67,6 @@ void trim(string &str) {
 
 bool history_enabled = true;
 
-static string history_file_name;
 } // namespace
 
 namespace constants {
@@ -87,19 +86,7 @@ int main() {
   vector<string> executables = path::get_all_executables();
   completion::register_commands(executables);
 
-  const optional<string> home_path = path::home_path();
-  history_file_name = *home_path + "/.shell_cpp_history";
-  if (!home_path) {
-    history_enabled = false;
-  }
-  if (history_enabled && !fopen(history_file_name.c_str(), "a+")) {
-    history_enabled = false;
-  }
-  if (history_enabled && read_history(history_file_name.c_str()) != 0) {
-    history_enabled = false;
-  }
-  if (history_enabled) {
-    // temp comment in order to pass current stage that doesnt expect persistence yet
+  if (char *history_file = getenv("HISTFILE"); history_file && read_history(history_file) == 0) {
     // atexit([]() { (void)write_history(history_file_name.c_str()); });
   }
 
